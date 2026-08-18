@@ -1,0 +1,37 @@
+name: Gerar APK Android (WS Alimentacao)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Compilar com Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          buildozer_version: stable
+
+      - name: Publicar APK como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: WS-Alimentacao-APK
+          path: ${{ steps.buildozer.outputs.filename }}
+
+      - name: Publicar Release com link do APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: WS Alimentacao - APK
+          body: APK do app WS Alimentacao. Baixe o .apk abaixo e instale no Android.
+          files: ${{ steps.buildozer.outputs.filename }}
