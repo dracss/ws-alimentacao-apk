@@ -1,0 +1,17 @@
+{
+  "name": "WS Alimentação — Gestão de Refeições",
+  "short_name": "WS Alimentação",
+  "description": "Cadastro de clientes, lançamento de pedidos e relatórios de refeições.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F2ECDF",
+  "theme_color": "#17441E",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

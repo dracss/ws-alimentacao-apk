@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17441E">
+<title>WS Alimentação — Gestão de Refeições</title>
+<link rel="icon" href="assets/favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<!-- Bibliotecas de exportação (PDF e Excel) — locais, funcionam offline -->
+<script src="assets/vendor/jspdf.umd.min.js"></script>
+<script src="assets/vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="assets/vendor/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --verde:#17441E; --verde2:#2E7D45; --laranja:#E08003; --laranja2:#F4A93C;
+    --marrom:#342110; --marrom2:#6B4E32; --creme:#F6F1E7; --fundo:#F2ECDF;
+    --card:#FFFFFF; --linha:#E4DAC5; --vermelho:#B03A2E;
+    --sombra:0 2px 10px rgba(52,33,16,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:var(--fundo);color:var(--marrom);display:flex;min-height:100vh}
+  /* ---------- Sidebar ---------- */
+  #sidebar{width:250px;background:var(--verde);color:#fff;display:flex;
+    flex-direction:column;padding:20px 0;position:sticky;top:0;height:100vh;flex-shrink:0}
+  .logo-wrap{display:flex;flex-direction:column;align-items:center;padding:0 16px 14px}
+  .logo-disc{width:118px;height:118px;border-radius:50%;background:#fff;
+    display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra)}
+  .logo-disc img{width:96px;height:96px;object-fit:contain}
+  .brand{font-size:19px;font-weight:800;margin-top:10px;letter-spacing:.5px}
+  .slogan{font-size:11px;color:var(--laranja2);margin-top:2px}
+  nav{margin-top:14px;display:flex;flex-direction:column;gap:4px;padding:0 12px}
+  nav button{display:flex;align-items:center;gap:12px;background:transparent;border:0;
+    color:#fff;font-size:15px;font-weight:600;padding:12px 14px;border-radius:10px;
+    cursor:pointer;text-align:left;transition:.15s;width:100%}
+  nav button .ic{font-size:18px;width:22px;text-align:center}
+  nav button:hover{background:var(--verde2)}
+  nav button.active{background:var(--laranja)}
+  .side-foot{margin-top:auto;text-align:center;font-size:11px;color:var(--laranja2);padding:10px}
+  /* ---------- Conteúdo ---------- */
+  #main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:none;align-items:center;gap:12px;background:var(--verde);
+    color:#fff;padding:12px 16px;position:sticky;top:0;z-index:20}
+  .topbar img{width:34px;height:34px;border-radius:50%;background:#fff;padding:3px}
+  .topbar b{font-size:16px}
+  #burger{background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer}
+  .view{padding:26px 30px;max-width:1200px}
+  h1{color:var(--verde);font-size:26px;margin-bottom:2px}
+  .sub{color:var(--marrom2);font-size:14px;margin-bottom:18px}
+  /* Cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--card);border-radius:14px;padding:16px 18px;box-shadow:var(--sombra)}
+  .card .lbl{font-size:13px;font-weight:700;color:var(--marrom2);display:flex;align-items:center;gap:8px}
+  .card .val{font-size:30px;font-weight:800;margin-top:6px}
+  .panel{background:var(--card);border-radius:14px;box-shadow:var(--sombra);padding:18px;margin-bottom:16px}
+  .panel h2{color:var(--verde);font-size:17px;margin-bottom:12px}
+  /* Barra de filtros */
+  .filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;font-weight:700;color:var(--marrom2)}
+  input,select{font:inherit;padding:9px 11px;border:1px solid var(--linha);border-radius:9px;
+    background:#fff;color:var(--marrom);min-height:40px}
+  input:focus,select:focus{outline:2px solid var(--laranja2);border-color:var(--laranja)}
+  /* Botões */
+  .btn{border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;
+    cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:42px}
+  .btn-laranja{background:var(--laranja);color:#fff}
+  .btn-laranja:hover{background:#c26f02}
+  .btn-verde{background:var(--verde);color:#fff}
+  .btn-verde:hover{background:var(--verde2)}
+  .btn-marrom{background:var(--marrom2);color:#fff}
+  .btn-out{background:transparent;border:1px solid var(--laranja);color:var(--marrom)}
+  .btn-out:hover{background:var(--creme)}
+  .btn-del{background:transparent;border:1px solid var(--vermelho);color:var(--vermelho)}
+  .btn-del:hover{background:#f7e4e1}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chips .btn-out{padding:7px 12px;min-height:34px;font-size:13px}
+  /* Tabelas */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl-wrap{overflow-x:auto;border-radius:10px}
+  th,td{padding:9px 10px;text-align:center;border:1px solid var(--linha);white-space:nowrap}
+  th{background:var(--verde);color:#fff;font-size:12.5px;position:sticky;top:0}
+  td.left,th.left{text-align:left}
+  tbody tr:nth-child(even){background:var(--creme)}
+  .tot-col{background:var(--laranja2)!important;font-weight:800}
+  .row-total td{background:var(--laranja);color:#fff;font-weight:800;font-size:15px}
+  .muted{color:#bdb08f}
+  /* Lista (clientes/tipos) */
+  .list-item{display:flex;align-items:center;gap:12px;background:var(--card);
+    border-radius:10px;padding:12px 14px;box-shadow:var(--sombra);margin-bottom:8px}
+  .list-item:nth-child(odd){background:#fff}
+  .list-item .info{flex:1;min-width:0}
+  .list-item .nm{font-weight:700;font-size:15px;color:var(--marrom)}
+  .list-item .meta{font-size:12.5px;color:var(--marrom2);margin-top:2px}
+  .list-item .preco{font-weight:800;color:var(--laranja);font-size:16px;margin-right:8px}
+  .qty{width:82px;text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--verde);color:#fff;padding:12px 22px;border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,.25);font-weight:600;z-index:100;opacity:0;
+    transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;bottom:32px}
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(20,10,0,.45);display:none;
+    align-items:center;justify-content:center;z-index:50;padding:16px}
+  .overlay.show{display:flex}
+  .modal{background:var(--fundo);border-radius:16px;width:100%;max-width:460px;
+    padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .modal h3{color:var(--verde);margin-bottom:14px}
+  .modal .field{margin-bottom:10px}
+  .modal input{width:100%}
+  .modal-actions{display:flex;gap:10px;margin-top:16px}
+  .modal-actions .btn{flex:1;justify-content:center}
+  .empty{color:var(--marrom2);text-align:center;padding:30px;font-size:15px}
+  #scrim{display:none}
+  /* Responsivo */
+  @media(max-width:860px){
+    #sidebar{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);
+      transition:.25s;box-shadow:6px 0 24px rgba(0,0,0,.25)}
+    body.menu-open #sidebar{transform:translateX(0)}
+    body.menu-open #scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35}
+    .topbar{display:flex}
+    .view{padding:18px 16px}
+    h1{font-size:22px}
+  }
+</style>
+</head>
+<body>
+  <div id="scrim" onclick="toggleMenu(false)"></div>
+  <aside id="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-disc"><img src="assets/logo_ws.png" alt="WS Alimentação"></div>
+      <div class="brand">WS ALIMENTAÇÃO</div>
+      <div class="slogan">Qualidade • Sabor • Cuidado</div>
+    </div>
+    <nav id="nav">
+      <button data-v="dashboard" class="active"><span class="ic">📊</span> Painel do dia</button>
+      <button data-v="pedidos"><span class="ic">📝</span> Lançar pedidos</button>
+      <button data-v="relatorios"><span class="ic">📄</span> Relatórios</button>
+      <button data-v="clientes"><span class="ic">👥</span> Clientes</button>
+      <button data-v="tipos"><span class="ic">🍽️</span> Tipos e preços</button>
+      <button data-v="backup"><span class="ic">💾</span> Backup</button>
+    </nav>
+    <div class="side-foot">v1.0 • Web</div>
+  </aside>
+
+  <div id="main">
+    <div class="topbar">
+      <button id="burger" onclick="toggleMenu()">☰</button>
+      <img src="assets/logo_ws.png" alt=""><b>WS Alimentação</b>
+    </div>
+    <div id="content"></div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   WS Alimentação — app web (dados no navegador via localStorage)
+   ============================================================ */
+const LS_KEY = 'ws_alimentacao_v1';
+const DIAS = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+
+const SEED_TIPOS = [
+  {nome:'Café da Manhã', preco:6.00, ordem:1},
+  {nome:'Almoço Industrial', preco:16.00, ordem:2},
+  {nome:'Jantar Industrial', preco:16.00, ordem:3},
+  {nome:'Água Mineral', preco:6.00, ordem:4},
+  {nome:'Merenda Noturna', preco:7.00, ordem:5},
+  {nome:'Gelo', preco:8.00, ordem:6},
+];
+
+let DB = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const db = {seq:0, clientes:[], tipos:[], pedidos:[]};
+  SEED_TIPOS.forEach(t=> db.tipos.push({id:++db.seq, ...t, ativo:1}));
+  return db;
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+function nid(){ return ++DB.seq; }
+
+/* ---------- Utilidades ---------- */
+function brl(v){
+  return 'R$ ' + (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function hojeISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function isoToBR(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function brToISO(br){
+  br=(br||'').trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(br)) return br;
+  const m=br.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(!m) return null;
+  let[_,d,mo,y]=m; if(y.length===2)y='20'+y;
+  return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+function diaSemana(iso){ const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); return DIAS[(dt.getDay()+6)%7]; }
+function diaNum(iso){ return String(Number(iso.split('-')[2])); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+function toggleMenu(force){ document.body.classList.toggle('menu-open', force===undefined?undefined:force); }
+
+/* ---------- Consultas ---------- */
+function tiposOrdenados(){ return DB.tipos.slice().sort((a,b)=>(a.ordem-b.ordem)||a.nome.localeCompare(b.nome)); }
+function clientesOrdenados(){ return DB.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)); }
+function precoDe(id){ const t=DB.tipos.find(x=>x.id===id); return t?t.preco:0; }
+function nomeTipo(id){ const t=DB.tipos.find(x=>x.id===id); return t?t.nome:'?'; }
+
+function matriz(clienteId, ini, fim){
+  const tipos = tiposOrdenados();
+  const grade = {}; const totais = {}; const diasSet = new Set();
+  tipos.forEach(t=>{ grade[t.id]={}; totais[t.id]=0; });
+  DB.pedidos.forEach(p=>{
+    if(p.data<ini||p.data>fim) return;
+    if(clienteId && p.cliente_id!==clienteId) return;
+    if(!(p.tipo_id in grade)){ grade[p.tipo_id]={}; totais[p.tipo_id]=0; }
+    grade[p.tipo_id][p.data]=(grade[p.tipo_id][p.data]||0)+p.quantidade;
+    totais[p.tipo_id]+=p.quantidade;
+    diasSet.add(p.data);
+  });
+  const dias=[...diasSet].sort();
+  const usados=tipos.filter(t=>totais[t.id]>0);
+  const valores={}; let total=0;
+  tipos.forEach(t=>{ valores[t.id]=totais[t.id]*precoDe(t.id); total+=valores[t.id]; });
+  return {dias, tipos:usados, grade, totais, valores, total};
+}
+
+/* ============================================================
+   ROTEAMENTO DE TELAS
+   ============================================================ */
+const C = ()=>document.getElementById('content');
+document.getElementById('nav').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-v]'); if(!b) return;
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b));
+  toggleMenu(false);
+  render(b.dataset.v);
+});
+function render(v){
+  ({dashboard:viewDashboard, pedidos:viewPedidos, relatorios:viewRelatorios,
+    clientes:viewClientes, tipos:viewTipos, backup:viewBackup}[v]||viewDashboard)();
+}
+
+/* ---------- Painel do dia ---------- */
+let dashData = hojeISO();
+function viewDashboard(){
+  C().innerHTML = `
+   <div class="view">
+    <h1>Painel do dia</h1><div class="sub">Resumo consolidado das refeições fornecidas</div>
+    <div class="panel">
+     <div class="filters">
+      <div class="field"><label>Data</label><input type="date" id="dData" value="${dashData}"></div>
+      <button class="btn btn-laranja" onclick="dashData=document.getElementById('dData').value;viewDashboard()">Atualizar</button>
+     </div>
+    </div>
+    <div id="dashBody"></div>
+   </div>`;
+  const d=dashData, m=matriz(null,d,d);
+  const totRef=m.tipos.reduce((s,t)=>s+m.totais[t.id],0);
+  const nCli=new Set(DB.pedidos.filter(p=>p.data===d).map(p=>p.cliente_id)).size;
+  let body=`<div class="cards">
+    <div class="card"><div class="lbl">🍽️ Refeições no dia</div><div class="val" style="color:var(--laranja)">${totRef}</div></div>
+    <div class="card"><div class="lbl">👥 Clientes atendidos</div><div class="val" style="color:var(--verde2)">${nCli}</div></div>
+    <div class="card"><div class="lbl">💰 Valor do dia</div><div class="val" style="color:var(--verde)">${brl(m.total)}</div></div>
+   </div>`;
+  body+=`<div class="panel"><h2>Resumo de ${isoToBR(d)}</h2>`;
+  if(!m.tipos.length){ body+=`<div class="empty">Nenhum lançamento nesta data.</div></div>`; }
+  else{
+    body+=`<div class="tbl-wrap"><table><thead><tr>
+      <th class="left">Tipo de refeição</th><th>Qtd.</th><th>Preço unit.</th><th>Valor total</th></tr></thead><tbody>`;
+    m.tipos.forEach(t=>{ body+=`<tr><td class="left">${esc(t.nome)}</td><td>${m.totais[t.id]}</td>
+      <td>${brl(precoDe(t.id))}</td><td>${brl(m.valores[t.id])}</td></tr>`; });
+    body+=`<tr class="row-total"><td class="left" colspan="3">TOTAL DO DIA</td><td>${brl(m.total)}</td></tr>`;
+    body+=`</tbody></table></div></div>`;
+  }
+  document.getElementById('dashBody').innerHTML=body;
+}
+
+/* ---------- Lançar pedidos ---------- */
+let pedData = hojeISO();
+function viewPedidos(){
+  const cls=clientesOrdenados();
+  if(!cls.length){
+    C().innerHTML=`<div class="view"><h1>Lançar pedidos</h1>
+      <div class="panel empty">Cadastre um cliente antes de lançar pedidos.<br><br>
+      <button class="btn btn-laranja" onclick="goto('clientes')">Ir para Clientes</button></div></div>`;
+    return;
+  }
+  C().innerHTML=`
+   <div class="view">
+    <h1>Lançar pedidos</h1><div class="sub">Registre as quantidades por cliente e por dia</div>
+    <div class="panel">
+     <div class="filters">
+      <div class="field"><label>Cliente</label><select id="pCli">${cls.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></div>
+      <div class="field"><label>Data</label><input type="date" id="pData" value="${pedData}"></div>
+      <button class="btn btn-marrom" onclick="carregarPedidos()">Carregar</button>
+     </div>
+    </div>
+    <div class="panel"><div id="pGrid"></div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px">
+      <span id="pMsg" class="sub" style="margin:0"></span>
+      <button class="btn btn-laranja" onclick="salvarPedidos()">💾 Salvar lançamento</button>
+     </div>
+    </div>
+   </div>`;
+  document.getElementById('pData').addEventListener('change',carregarPedidos);
+  document.getElementById('pCli').addEventListener('change',carregarPedidos);
+  carregarPedidos();
+}
+function carregarPedidos(){
+  pedData=document.getElementById('pData').value;
+  const cli=Number(document.getElementById('pCli').value);
+  const atuais={};
+  DB.pedidos.filter(p=>p.cliente_id===cli&&p.data===pedData).forEach(p=>atuais[p.tipo_id]=p.quantidade);
+  let h=`<div class="tbl-wrap"><table><thead><tr><th class="left">Tipo de refeição</th><th>Preço unit.</th><th>Quantidade</th></tr></thead><tbody>`;
+  tiposOrdenados().forEach(t=>{
+    const v=atuais[t.id]||'';
+    h+=`<tr><td class="left">${esc(t.nome)}</td><td>${brl(t.preco)}</td>
+      <td><input class="qty" type="number" min="0" inputmode="numeric" data-tipo="${t.id}" value="${v}"></td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('pGrid').innerHTML=h;
+}
+function salvarPedidos(){
+  const cli=Number(document.getElementById('pCli').value);
+  DB.pedidos=DB.pedidos.filter(p=>!(p.cliente_id===cli&&p.data===pedData));
+  let tot=0;
+  document.querySelectorAll('#pGrid input[data-tipo]').forEach(inp=>{
+    const q=parseInt(inp.value,10);
+    if(q&&q>0){ DB.pedidos.push({cliente_id:cli,tipo_id:Number(inp.dataset.tipo),data:pedData,quantidade:q}); tot+=q; }
+  });
+  save();
+  document.getElementById('pMsg').textContent=`✓ Salvo — ${tot} refeições em ${isoToBR(pedData)}.`;
+  toast('Lançamento salvo!');
+}
+
+/* ---------- Relatórios ---------- */
+let relState={cli:'',ini:'',fim:'',desc:0,dados:null};
+function viewRelatorios(){
+  const cls=clientesOrdenados();
+  const datas=DB.pedidos.map(p=>p.data).sort();
+  const ini=relState.ini||(datas[0]||hojeISO());
+  const fim=relState.fim||(datas[datas.length-1]||hojeISO());
+  C().innerHTML=`
+   <div class="view">
+    <h1>Relatórios</h1><div class="sub">Consolide por dia ou período e exporte em PDF/Excel</div>
+    <div class="panel">
+     <div class="filters">
+      <div class="field"><label>Cliente</label>
+        <select id="rCli"><option value="">— Todos os clientes —</option>
+        ${cls.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></div>
+      <div class="field"><label>De</label><input type="date" id="rIni" value="${ini}"></div>
+      <div class="field"><label>Até</label><input type="date" id="rFim" value="${fim}"></div>
+      <div class="field"><label>Desconto (R$)</label><input type="number" id="rDesc" min="0" step="0.01" value="0" style="width:120px"></div>
+      <button class="btn btn-verde" onclick="gerarRel()">🔎 Gerar</button>
+     </div>
+     <div class="chips">
+      <button class="btn btn-out" onclick="atalho('hoje')">Hoje</button>
+      <button class="btn btn-out" onclick="atalho('ontem')">Ontem</button>
+      <button class="btn btn-out" onclick="atalho('7')">Últimos 7 dias</button>
+      <button class="btn btn-out" onclick="atalho('mes')">Este mês</button>
+     </div>
+     <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-laranja" id="bPdf" disabled onclick="exportarPDF()">📄 Exportar PDF</button>
+      <button class="btn btn-marrom" id="bXls" disabled onclick="exportarExcel()">📊 Exportar Excel</button>
+     </div>
+    </div>
+    <div class="panel" id="relOut"><div class="empty">Selecione o período e clique em Gerar.</div></div>
+   </div>`;
+  if(relState.cli!==undefined) document.getElementById('rCli').value=relState.cli||'';
+}
+function atalho(tipo){
+  const t=new Date(); const iso=d=>d.toISOString().slice(0,10);
+  let a,b;
+  if(tipo==='hoje'){a=b=iso(t);}
+  else if(tipo==='ontem'){const y=new Date(t);y.setDate(t.getDate()-1);a=b=iso(y);}
+  else if(tipo==='7'){const y=new Date(t);y.setDate(t.getDate()-6);a=iso(y);b=iso(t);}
+  else{a=iso(new Date(t.getFullYear(),t.getMonth(),1));b=iso(t);}
+  document.getElementById('rIni').value=a; document.getElementById('rFim').value=b;
+  gerarRel();
+}
+function gerarRel(){
+  let ini=document.getElementById('rIni').value, fim=document.getElementById('rFim').value;
+  if(!ini||!fim){toast('Informe as datas.');return;}
+  if(ini>fim){[ini,fim]=[fim,ini];}
+  const cli=document.getElementById('rCli').value?Number(document.getElementById('rCli').value):null;
+  const desc=parseFloat(document.getElementById('rDesc').value)||0;
+  const m=matriz(cli,ini,fim);
+  relState={cli:document.getElementById('rCli').value,ini,fim,desc,dados:m,cliId:cli};
+  const out=document.getElementById('relOut');
+  const bPdf=document.getElementById('bPdf'), bXls=document.getElementById('bXls');
+  if(!m.tipos.length){ out.innerHTML=`<div class="empty">Nenhum lançamento neste período.</div>`; bPdf.disabled=bXls.disabled=true; return; }
+  bPdf.disabled=bXls.disabled=false;
+  let h=`<h2>Período: ${ini===fim?isoToBR(ini):isoToBR(ini)+' a '+isoToBR(fim)} • ${m.dias.length} dia(s)</h2>`;
+  // grade diária
+  h+=`<div class="tbl-wrap"><table><thead><tr><th>Item</th><th class="left">Tipo</th>`;
+  m.dias.forEach(d=> h+=`<th>${diaSemana(d)}<br>${diaNum(d)}</th>`);
+  h+=`<th>Total</th></tr></thead><tbody>`;
+  m.tipos.forEach((t,i)=>{
+    h+=`<tr><td>${i+1}</td><td class="left">${esc(t.nome)}</td>`;
+    m.dias.forEach(d=>{const q=m.grade[t.id][d]; h+=`<td class="${q?'':'muted'}">${q||'·'}</td>`;});
+    h+=`<td class="tot-col">${m.totais[t.id]}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  // resumo
+  h+=`<h2 style="margin-top:18px">Resumo financeiro</h2><div class="tbl-wrap"><table>
+    <thead><tr><th class="left">Tipo de refeição</th><th>Qtd. total</th><th>Preço unit.</th><th>Valor total</th></tr></thead><tbody>`;
+  m.tipos.forEach(t=> h+=`<tr><td class="left">${esc(t.nome)}</td><td>${m.totais[t.id]}</td><td>${brl(precoDe(t.id))}</td><td>${brl(m.valores[t.id])}</td></tr>`);
+  const totalPagar=m.total-desc;
+  h+=`<tr><td class="left" colspan="3" style="text-align:right;font-weight:700">Subtotal</td><td>${brl(m.total)}</td></tr>`;
+  if(desc>0) h+=`<tr><td class="left" colspan="3" style="text-align:right;font-weight:700">Descontos</td><td>- ${brl(desc)}</td></tr>`;
+  h+=`<tr class="row-total"><td class="left" colspan="3">TOTAL A PAGAR</td><td>${brl(totalPagar)}</td></tr>`;
+  h+=`</tbody></table></div>`;
+  out.innerHTML=h;
+}
+
+/* ---------- Clientes ---------- */
+function viewClientes(){
+  const cls=clientesOrdenados();
+  let h=`<div class="view"><h1>Clientes</h1><div class="sub">Empresas e obras atendidas</div>
+    <button class="btn btn-laranja" style="margin-bottom:14px" onclick="formCliente()">➕ Novo cliente</button><div>`;
+  if(!cls.length) h+=`<div class="panel empty">Nenhum cliente cadastrado ainda.</div>`;
+  cls.forEach(c=>{
+    const meta=[c.trecho&&`Trecho: ${c.trecho}`,c.contato&&`Contato: ${c.contato}`,c.documento&&`Doc: ${c.documento}`].filter(Boolean).join('  •  ');
+    h+=`<div class="list-item"><div class="info"><div class="nm">${esc(c.nome)}</div>${meta?`<div class="meta">${esc(meta)}</div>`:''}</div>
+      <button class="btn btn-out" onclick='formCliente(${c.id})'>Editar</button>
+      <button class="btn btn-del" onclick="delCliente(${c.id})">Excluir</button></div>`;
+  });
+  h+=`</div></div>`;
+  C().innerHTML=h;
+}
+function formCliente(id){
+  const c=id?DB.clientes.find(x=>x.id===id):{nome:'',trecho:'',contato:'',documento:''};
+  openModal(`${id?'Editar':'Novo'} cliente`,`
+    <div class="field"><label>Nome / Empresa *</label><input id="mNome" value="${esc(c.nome)}"></div>
+    <div class="field"><label>Trecho / Obra</label><input id="mTrecho" value="${esc(c.trecho)}"></div>
+    <div class="field"><label>Contato</label><input id="mContato" value="${esc(c.contato)}"></div>
+    <div class="field"><label>CNPJ / Documento</label><input id="mDoc" value="${esc(c.documento)}"></div>`,
+    ()=>{
+      const nome=document.getElementById('mNome').value.trim();
+      if(!nome){toast('Informe o nome.');return false;}
+      const o={nome,trecho:document.getElementById('mTrecho').value.trim(),
+        contato:document.getElementById('mContato').value.trim(),documento:document.getElementById('mDoc').value.trim()};
+      if(id){ Object.assign(DB.clientes.find(x=>x.id===id),o); }
+      else{ DB.clientes.push({id:nid(),ativo:1,...o}); }
+      save(); viewClientes(); toast('Cliente salvo!');
+    });
+}
+function delCliente(id){
+  const c=DB.clientes.find(x=>x.id===id);
+  if(!confirm(`Excluir "${c.nome}" e todos os seus lançamentos?`))return;
+  DB.clientes=DB.clientes.filter(x=>x.id!==id);
+  DB.pedidos=DB.pedidos.filter(p=>p.cliente_id!==id);
+  save(); viewClientes();
+}
+
+/* ---------- Tipos e preços ---------- */
+function viewTipos(){
+  let h=`<div class="view"><h1>Tipos de refeição e preços</h1><div class="sub">Itens fornecidos e valores unitários</div>
+    <button class="btn btn-laranja" style="margin-bottom:14px" onclick="formTipo()">➕ Novo tipo</button><div>`;
+  tiposOrdenados().forEach(t=>{
+    h+=`<div class="list-item"><div class="info"><div class="nm">${esc(t.nome)}</div></div>
+      <span class="preco">${brl(t.preco)}</span>
+      <button class="btn btn-out" onclick="formTipo(${t.id})">Editar</button>
+      <button class="btn btn-del" onclick="delTipo(${t.id})">Excluir</button></div>`;
+  });
+  h+=`</div></div>`; C().innerHTML=h;
+}
+function formTipo(id){
+  const t=id?DB.tipos.find(x=>x.id===id):{nome:'',preco:0,ordem:0};
+  openModal(`${id?'Editar':'Novo'} tipo`,`
+    <div class="field"><label>Nome *</label><input id="mNome" value="${esc(t.nome)}"></div>
+    <div class="field"><label>Preço unitário (R$) *</label><input id="mPreco" type="number" min="0" step="0.01" value="${t.preco}"></div>
+    <div class="field"><label>Ordem de exibição</label><input id="mOrdem" type="number" value="${t.ordem}"></div>`,
+    ()=>{
+      const nome=document.getElementById('mNome').value.trim();
+      const preco=parseFloat(document.getElementById('mPreco').value);
+      if(!nome){toast('Informe o nome.');return false;}
+      if(isNaN(preco)){toast('Preço inválido.');return false;}
+      const o={nome,preco,ordem:parseInt(document.getElementById('mOrdem').value,10)||0};
+      if(id){ Object.assign(DB.tipos.find(x=>x.id===id),o); }
+      else{ DB.tipos.push({id:nid(),ativo:1,...o}); }
+      save(); viewTipos(); toast('Tipo salvo!');
+    });
+}
+function delTipo(id){
+  const t=DB.tipos.find(x=>x.id===id);
+  if(!confirm(`Excluir "${t.nome}"? Os lançamentos ligados a ele também serão removidos.`))return;
+  DB.tipos=DB.tipos.filter(x=>x.id!==id);
+  DB.pedidos=DB.pedidos.filter(p=>p.tipo_id!==id);
+  save(); viewTipos();
+}
+
+/* ---------- Backup ---------- */
+function viewBackup(){
+  const nC=DB.clientes.length, nP=DB.pedidos.length;
+  C().innerHTML=`<div class="view"><h1>Backup e restauração</h1>
+    <div class="sub">Seus dados ficam salvos neste navegador. Faça backup para não perdê-los ou para levar a outro dispositivo.</div>
+    <div class="panel">
+      <p style="margin-bottom:6px"><b>${DB.clientes.length}</b> clientes • <b>${nP}</b> lançamentos • <b>${DB.tipos.length}</b> tipos</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-laranja" onclick="exportBackup()">⬇️ Baixar backup (.json)</button>
+        <label class="btn btn-marrom" style="cursor:pointer">⬆️ Restaurar backup
+          <input type="file" accept="application/json" style="display:none" onchange="importBackup(event)"></label>
+      </div>
+      <p class="sub" style="margin-top:14px">Dica: guarde o arquivo de backup no Google Drive. Para usar em outro celular/PC, abra o mesmo endereço e restaure o backup.</p>
+    </div></div>`;
+}
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  baixar(blob,`backup_ws_${hojeISO()}.json`);
+  toast('Backup baixado!');
+}
+function importBackup(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    if(!d.clientes||!d.tipos||!d.pedidos) throw 0;
+    if(!confirm('Isso substituirá os dados atuais deste navegador. Continuar?'))return;
+    DB=d; if(!DB.seq)DB.seq=Math.max(0,...DB.clientes.map(c=>c.id),...DB.tipos.map(t=>t.id)); save();
+    toast('Backup restaurado!'); viewBackup();
+  }catch(e){ toast('Arquivo inválido.'); } };
+  r.readAsText(f);
+}
+
+/* ---------- Modal genérico ---------- */
+function openModal(titulo, corpo, onSave){
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`<div class="modal"><h3>${titulo}</h3>${corpo}
+    <div class="modal-actions">
+      <button class="btn btn-out" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-laranja" id="mSave">Salvar</button>
+    </div></div>`;
+  ov.classList.add('show');
+  document.getElementById('mSave').onclick=()=>{ if(onSave()!==false) closeModal(); };
+  const first=ov.querySelector('input'); if(first)first.focus();
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay')closeModal(); });
+
+function goto(v){ document.querySelector(`#nav button[data-v="${v}"]`).click(); }
+/* Detecta se está rodando dentro do app Android (WebView) */
+const ANDROID = navigator.userAgent.includes('WSAndroid');
+/* Entrega um data-URL ao WebView Android (capturado e salvo em Download/) */
+function entregaAndroid(dataUrl, nome){
+  const a=document.createElement('a');
+  a.href=dataUrl + '#fn=' + encodeURIComponent(nome);
+  a.download=nome; document.body.appendChild(a); a.click();
+  setTimeout(()=>a.remove(),500);
+}
+function baixar(blob,nome){
+  if(ANDROID){ const r=new FileReader(); r.onload=()=>entregaAndroid(r.result,nome); r.readAsDataURL(blob); return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+
+/* ============================================================
+   EXPORTAÇÃO PDF (jsPDF + autotable) e EXCEL (SheetJS)
+   ============================================================ */
+let LOGO_DATAURL=null;
+(function(){ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=c.height=256;
+  c.getContext('2d').drawImage(img,0,0,256,256); try{LOGO_DATAURL=c.toDataURL('image/png');}catch(e){} };
+  img.src='assets/logo_ws.png'; })();
+
+function infoCliente(){
+  if(relState.cliId){ const c=DB.clientes.find(x=>x.id===relState.cliId); return {nome:c?c.nome:'Cliente',trecho:c?c.trecho:''}; }
+  return {nome:'Todos os clientes',trecho:''};
+}
+function exportarPDF(){
+  const m=relState.dados; if(!m)return;
+  const {nome,trecho}=infoCliente();
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth();
+  if(LOGO_DATAURL) doc.addImage(LOGO_DATAURL,'PNG',12,8,20,20);
+  doc.setTextColor(23,68,30); doc.setFont('helvetica','bold'); doc.setFontSize(20);
+  doc.text('WS ALIMENTAÇÃO',36,17);
+  doc.setTextColor(224,128,3); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Qualidade • Sabor • Cuidado',36,23);
+  doc.setTextColor(52,33,16); doc.setFontSize(10);
+  const per=relState.ini===relState.fim?isoToBR(relState.ini):`${isoToBR(relState.ini)} a ${isoToBR(relState.fim)}`;
+  const dir=[`Cliente: ${nome}`,`Trecho/Obra: ${trecho||'—'}`,`Período: ${per}`,
+    `Emitido em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`];
+  dir.forEach((t,i)=> doc.text(t,W-12,13+i*5,{align:'right'}));
+  doc.setDrawColor(224,128,3); doc.setLineWidth(.8); doc.line(12,30,W-12,30);
+
+  // Grade diária
+  const head=[['ITEM','TIPO DE REFEIÇÃO',...m.dias.map(d=>`${diaSemana(d)}\n${diaNum(d)}`),'TOTAL']];
+  const body=m.tipos.map((t,i)=>[String(i+1),t.nome,
+    ...m.dias.map(d=>{const q=m.grade[t.id][d];return q?String(q):'';}), String(m.totais[t.id])]);
+  doc.autoTable({head,body,startY:34,theme:'grid',
+    styles:{fontSize:8,halign:'center',valign:'middle',lineColor:[216,201,168],lineWidth:.2,textColor:[52,33,16]},
+    headStyles:{fillColor:[23,68,30],textColor:255,fontSize:7.5},
+    columnStyles:{0:{cellWidth:11},1:{halign:'left',cellWidth:42}},
+    didParseCell:d=>{ if(d.column.index===head[0].length-1){ d.cell.styles.fillColor=[244,169,74]; d.cell.styles.fontStyle='bold'; } }});
+
+  // Resumo
+  let y=doc.lastAutoTable.finalY+8;
+  doc.setTextColor(23,68,30);doc.setFont('helvetica','bold');doc.setFontSize(12);
+  doc.text('Resumo financeiro',12,y);
+  const rHead=[['TIPO DE REFEIÇÃO','QUANT.','PREÇO UNIT.','VALOR TOTAL']];
+  const rBody=m.tipos.map(t=>[t.nome,String(m.totais[t.id]),brl(precoDe(t.id)),brl(m.valores[t.id])]);
+  const desc=relState.desc||0; const totalPagar=m.total-desc;
+  rBody.push([{content:'SUBTOTAL',colSpan:3,styles:{halign:'right',fontStyle:'bold'}},{content:brl(m.total),styles:{fontStyle:'bold'}}]);
+  rBody.push([{content:'DESCONTOS',colSpan:3,styles:{halign:'right',fontStyle:'bold'}},{content:desc?('- '+brl(desc)):'—',styles:{fontStyle:'bold'}}]);
+  rBody.push([{content:'TOTAL A PAGAR',colSpan:3,styles:{halign:'right',fontStyle:'bold',fillColor:[224,128,3],textColor:255}},
+    {content:brl(totalPagar),styles:{fontStyle:'bold',fillColor:[224,128,3],textColor:255}}]);
+  doc.autoTable({head:rHead,body:rBody,startY:y+3,theme:'grid',tableWidth:170,
+    styles:{fontSize:9.5,valign:'middle',lineColor:[216,201,168],lineWidth:.2,textColor:[52,33,16]},
+    headStyles:{fillColor:[23,68,30],textColor:255},
+    columnStyles:{0:{halign:'left',cellWidth:80},1:{halign:'center'},2:{halign:'center'},3:{halign:'right'}}});
+  doc.setFontSize(7.5);doc.setTextColor(107,78,50);doc.setFont('helvetica','normal');
+  doc.text('WS ALIMENTAÇÃO — Qualidade • Sabor • Cuidado',12,doc.internal.pageSize.getHeight()-6);
+  const nomePdf=`WS_${nome.replace(/\s+/g,'_')}_${relState.ini}_a_${relState.fim}.pdf`;
+  if(ANDROID){ entregaAndroid(doc.output('datauristring'),nomePdf); toast('PDF salvo em Download.'); }
+  else{ doc.save(nomePdf); toast('PDF gerado!'); }
+}
+
+function exportarExcel(){
+  const m=relState.dados; if(!m)return;
+  const {nome,trecho}=infoCliente();
+  const per=relState.ini===relState.fim?isoToBR(relState.ini):`${isoToBR(relState.ini)} a ${isoToBR(relState.fim)}`;
+  const wb=XLSX.utils.book_new();
+  // Detalhamento
+  const a1=[['WS ALIMENTAÇÃO'],[`Cliente: ${nome}`,`Trecho: ${trecho||'—'}`],[`Período: ${per}`],[]];
+  a1.push(['ITEM','TIPO DE REFEIÇÃO',...m.dias.map(d=>diaSemana(d)),'TOTAL']);
+  a1.push(['','',...m.dias.map(d=>Number(diaNum(d))),'']);
+  m.tipos.forEach((t,i)=> a1.push([i+1,t.nome,...m.dias.map(d=>m.grade[t.id][d]||''),m.totais[t.id]]));
+  const ws1=XLSX.utils.aoa_to_sheet(a1); ws1['!cols']=[{wch:6},{wch:24},...m.dias.map(()=>({wch:5})),{wch:9}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Detalhamento');
+  // Resumo
+  const desc=relState.desc||0;
+  const a2=[['WS ALIMENTAÇÃO'],[`Cliente: ${nome}`],[`Período: ${per}`],[],
+    ['TIPO DE REFEIÇÃO','QUANT. TOTAL','PREÇO UNIT.','VALOR TOTAL']];
+  m.tipos.forEach(t=> a2.push([t.nome,m.totais[t.id],precoDe(t.id),m.totais[t.id]*precoDe(t.id)]));
+  a2.push(['SUBTOTAL','','',m.total]);
+  a2.push(['DESCONTOS','','',desc]);
+  a2.push(['TOTAL A PAGAR','','',m.total-desc]);
+  const ws2=XLSX.utils.aoa_to_sheet(a2); ws2['!cols']=[{wch:28},{wch:14},{wch:14},{wch:16}];
+  // formato moeda simples
+  for(let r=5;r<a2.length;r++){ ['C','D'].forEach(c=>{const cell=ws2[c+(r+1)]; if(cell&&typeof cell.v==='number')cell.z='R$ #,##0.00';}); }
+  XLSX.utils.book_append_sheet(wb,ws2,'Resumo');
+  const nomeXls=`WS_${nome.replace(/\s+/g,'_')}_${relState.ini}_a_${relState.fim}.xlsx`;
+  if(ANDROID){
+    const b64=XLSX.write(wb,{type:'base64',bookType:'xlsx'});
+    entregaAndroid('data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,'+b64,nomeXls);
+    toast('Excel salvo em Download.');
+  }else{ XLSX.writeFile(wb,nomeXls); toast('Excel gerado!'); }
+}
+
+/* ---------- Service worker (PWA) ---------- */
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+
+/* Início */
+render('dashboard');
+</script>
+</body>
+</html>
